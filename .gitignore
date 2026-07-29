@@ -19,3 +19,23 @@ env/
 
 # Environment variables
 .env
+
+# Project data and outputs
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+outputs/models/*
+outputs/predictions/*
+outputs/metrics/*
+!outputs/models/.gitkeep
+!outputs/predictions/.gitkeep
+!outputs/metrics/.gitkeep
+
+# Mac/system files
+.DS_Store
+
+# Virtual environments
+.venv/
+.env
