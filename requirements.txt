@@ -6,4 +6,4 @@ datasets
 nltk
 rouge-score
 tqdm
-matplotlib
+matplotlibopenai
