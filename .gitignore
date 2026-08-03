@@ -39,3 +39,9 @@ outputs/metrics/*
 # Virtual environments
 .venv/
 .env
+
+# Keep final results in the repo
+!outputs/metrics/*.json
+!outputs/metrics/*.csv
+!outputs/predictions/lstm_predictions_test.csv
+!outputs/predictions/llm_predictions_test.csv
