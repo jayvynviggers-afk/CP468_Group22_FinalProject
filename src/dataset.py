@@ -139,7 +139,7 @@ class Vocabulary:
 
 class HeadlineDataset(Dataset):
     def __init__(self, csv_path, source_vocab, target_vocab):
-        self.df = pd.read_csv(csv_path)
+        self.df = pd.read_csv(csv_path, keep_default_na=False, na_values=[])
         self.source_vocab = source_vocab
         self.target_vocab = target_vocab
 
