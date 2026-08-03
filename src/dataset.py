@@ -185,7 +185,7 @@ class HeadlineDataset(Dataset):
 
 
 def build_vocabs():
-    train_df = pd.read_csv(DATA_DIR / "train.csv")
+    train_df = pd.read_csv(DATA_DIR / "train.csv", keep_default_na=False, na_values=[])
 
     source_vocab = Vocabulary(max_size=MAX_SOURCE_VOCAB, min_freq=MIN_FREQ)
     target_vocab = Vocabulary(max_size=MAX_TARGET_VOCAB, min_freq=MIN_FREQ)
