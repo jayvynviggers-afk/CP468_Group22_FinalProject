@@ -100,16 +100,19 @@ def main():
     parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"])
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--max_examples", type=int, default=None)
+    parser.add_argument("--model_path", type=str, default=str(MODEL_PATH))
     args = parser.parse_args()
+
+    model_path = Path(args.model_path)
 
     set_seed()
     device = get_device()
 
     print(f"Using device: {device}")
 
-    if not MODEL_PATH.exists():
+    if not model_path.exists():
         raise FileNotFoundError(
-            f"Could not find trained model at {MODEL_PATH}. "
+            f"Could not find trained model at {model_path}. "
             f"Run python src/train.py first."
         )
 
@@ -124,7 +127,7 @@ def main():
     else:
         dataloader = test_loader
 
-    checkpoint = torch.load(MODEL_PATH, map_location="cpu")
+    checkpoint = torch.load(model_path, map_location="cpu")
 
     model = Seq2SeqAttentionModel(
         source_vocab_size=checkpoint["source_vocab_size"],
@@ -132,6 +135,7 @@ def main():
         embedding_dim=checkpoint["embedding_dim"],
         encoder_hidden_dim=checkpoint["hidden_dim"],
         dropout=checkpoint["dropout"],
+        use_attention=checkpoint.get("use_attention", True),
     )
 
     model.load_state_dict(checkpoint["model_state_dict"])
