@@ -34,3 +34,15 @@ outputs/predictions/  Model predictions
 outputs/metrics/      Evaluation results
 notebooks/            Data inspection notebooks
 report/figures/       Figures and tables for the report
+```
+
+## Runnable Sequence
+```text
+pip install -r requirements.txt
+python src/preprocess.py                          # builds data/processed/{train,val,test}.csv
+python src/train.py --epochs 5                    # -> outputs/models/best_lstm_attention.pt
+python src/evaluate.py --split test               # LSTM metrics
+export OPENAI_API_KEY=sk-...                       # required for the baseline
+python src/run_llm_baseline.py --max_examples 1000 --few_shot_k 3
+python src/evaluate_llm.py
+```
