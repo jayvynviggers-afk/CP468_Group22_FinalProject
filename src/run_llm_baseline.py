@@ -116,8 +116,8 @@ def main():
 
     client = OpenAI()
 
-    test_df = pd.read_csv(DATA_DIR / "test.csv")
-    train_df = pd.read_csv(DATA_DIR / "train.csv")
+    test_df = pd.read_csv(DATA_DIR / "test.csv", keep_default_na=False, na_values=[])
+    train_df = pd.read_csv(DATA_DIR / "train.csv", keep_default_na=False, na_values=[])
 
     test_df = test_df.head(args.max_examples)
     few_shot_examples = train_df.head(args.few_shot_k).to_dict("records")
@@ -163,6 +163,8 @@ def main():
     predictions_path = PREDICTIONS_DIR / "llm_predictions_test.csv"
     predictions_df.to_csv(predictions_path, index=False)
 
+    end_time = time.time()
+
     summary = {
         "model": args.model,
         "num_examples": len(test_df),
@@ -176,13 +178,11 @@ def main():
         "total_requests": total_requests,
         "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
-        "runtime_seconds": end_time - start_time if False else None,
-        "note": "Use token counts with current provider pricing to estimate API cost."
+        "runtime_seconds": end_time - start_time,
+        "runtime_minutes": (end_time - start_time) / 60,
+        "estimated_cost_usd": total_input_tokens / 1e6 * 0.10 + total_output_tokens / 1e6 * 0.40,
+        "note": "Cost uses gpt-4.1-nano list pricing $0.10/$0.40 per 1M input/output tokens."
     }
-
-    end_time = time.time()
-    summary["runtime_seconds"] = end_time - start_time
-    summary["runtime_minutes"] = (end_time - start_time) / 60
 
     summary_path = METRICS_DIR / "llm_baseline_summary.json"
 
