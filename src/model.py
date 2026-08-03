@@ -7,9 +7,8 @@ from dataset import get_dataloaders, MAX_SOURCE_LEN, MAX_TARGET_LEN
 
 
 class Encoder(nn.Module):
-    def __init__(self, target_vocab_size, embedding_dim, decoder_hidden_dim, dropout=0.3, use_attention=True):
+    def __init__(self, source_vocab_size, embedding_dim, encoder_hidden_dim, dropout=0.3):
         super().__init__()
-        self.use_attention = use_attention
 
         self.embedding = nn.Embedding(
             source_vocab_size,
@@ -32,29 +31,31 @@ class Encoder(nn.Module):
         self.cell_bridge = nn.Linear(encoder_hidden_dim * 2, encoder_hidden_dim * 2)
 
     def forward(self, source_ids):
-            embedded = self.dropout(self.embedding(source_ids))
-    
-            lengths = (source_ids != PAD_IDX).sum(dim=1).cpu()
-            packed = nn.utils.rnn.pack_padded_sequence(
-                embedded, lengths, batch_first=True, enforce_sorted=False
-            )
-            packed_outputs, (hidden, cell) = self.lstm(packed)
-            encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(
-                packed_outputs, batch_first=True, total_length=source_ids.shape[1]
-            )
-    
-            hidden_forward = hidden[-2]
-            hidden_backward = hidden[-1]
-            hidden_combined = torch.cat((hidden_forward, hidden_backward), dim=1)
-    
-            cell_forward = cell[-2]
-            cell_backward = cell[-1]
-            cell_combined = torch.cat((cell_forward, cell_backward), dim=1)
-    
-            decoder_hidden = torch.tanh(self.hidden_bridge(hidden_combined)).unsqueeze(0)
-            decoder_cell = torch.tanh(self.cell_bridge(cell_combined)).unsqueeze(0)
-    
-            return encoder_outputs, decoder_hidden, decoder_cell
+        embedded = self.dropout(self.embedding(source_ids))
+
+        # Pack by true length so the final hidden state is read off the last real
+        # token, not the trailing <pad> positions.
+        lengths = (source_ids != PAD_IDX).sum(dim=1).cpu()
+        packed = nn.utils.rnn.pack_padded_sequence(
+            embedded, lengths, batch_first=True, enforce_sorted=False
+        )
+        packed_outputs, (hidden, cell) = self.lstm(packed)
+        encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_outputs, batch_first=True, total_length=source_ids.shape[1]
+        )
+
+        hidden_forward = hidden[-2]
+        hidden_backward = hidden[-1]
+        hidden_combined = torch.cat((hidden_forward, hidden_backward), dim=1)
+
+        cell_forward = cell[-2]
+        cell_backward = cell[-1]
+        cell_combined = torch.cat((cell_forward, cell_backward), dim=1)
+
+        decoder_hidden = torch.tanh(self.hidden_bridge(hidden_combined)).unsqueeze(0)
+        decoder_cell = torch.tanh(self.cell_bridge(cell_combined)).unsqueeze(0)
+
+        return encoder_outputs, decoder_hidden, decoder_cell
 
 
 class Attention(nn.Module):
@@ -65,10 +66,6 @@ class Attention(nn.Module):
         self.v = nn.Linear(decoder_hidden_dim, 1, bias=False)
 
     def forward(self, decoder_hidden, encoder_outputs, source_mask):
-        # decoder_hidden shape: [1, batch_size, decoder_hidden_dim]
-        # encoder_outputs shape: [batch_size, source_len, decoder_hidden_dim]
-
-        batch_size = encoder_outputs.shape[0]
         source_len = encoder_outputs.shape[1]
 
         hidden = decoder_hidden[-1].unsqueeze(1).repeat(1, source_len, 1)
@@ -85,8 +82,10 @@ class Attention(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, target_vocab_size, embedding_dim, decoder_hidden_dim, dropout=0.3):
+    def __init__(self, target_vocab_size, embedding_dim, decoder_hidden_dim, dropout=0.3, use_attention=True):
         super().__init__()
+
+        self.use_attention = use_attention
 
         self.embedding = nn.Embedding(
             target_vocab_size,
@@ -116,10 +115,18 @@ class Decoder(nn.Module):
 
         embedded = self.dropout(self.embedding(input_token))
 
-        attention_weights = self.attention(hidden, encoder_outputs, source_mask)
-        attention_weights = attention_weights.unsqueeze(1)
-
-        context = torch.bmm(attention_weights, encoder_outputs)
+        if self.use_attention:
+            attention_weights = self.attention(hidden, encoder_outputs, source_mask)
+            attention_weights = attention_weights.unsqueeze(1)
+            context = torch.bmm(attention_weights, encoder_outputs)
+            attn_out = attention_weights.squeeze(1)
+        else:
+            # Ablation: no attention. Use a masked mean of the encoder outputs.
+            mask = source_mask.unsqueeze(2).float()
+            summed = (encoder_outputs * mask).sum(dim=1)
+            counts = mask.sum(dim=1).clamp(min=1)
+            context = (summed / counts).unsqueeze(1)
+            attn_out = None
 
         lstm_input = torch.cat((embedded, context), dim=2)
 
@@ -136,7 +143,7 @@ class Decoder(nn.Module):
 
         prediction = self.output_projection(prediction_input)
 
-        return prediction, hidden, cell, attention_weights.squeeze(1)
+        return prediction, hidden, cell, attn_out
 
 
 class Seq2SeqAttentionModel(nn.Module):
@@ -146,7 +153,8 @@ class Seq2SeqAttentionModel(nn.Module):
         target_vocab_size,
         embedding_dim=128,
         encoder_hidden_dim=128,
-        dropout=0.3
+        dropout=0.3,
+        use_attention=True
     ):
         super().__init__()
 
@@ -163,7 +171,8 @@ class Seq2SeqAttentionModel(nn.Module):
             target_vocab_size=target_vocab_size,
             embedding_dim=embedding_dim,
             decoder_hidden_dim=decoder_hidden_dim,
-            dropout=dropout
+            dropout=dropout,
+            use_attention=use_attention
         )
 
         self.target_vocab_size = target_vocab_size
@@ -280,8 +289,6 @@ def main():
 
     print("\nExample untrained generated headline:")
     print(target_vocab.decode(generated_ids[0].cpu()))
-
-    print("\nNote: The generated headline is nonsense right now because the model is not trained yet.")
 
 
 if __name__ == "__main__":
