@@ -120,6 +120,8 @@ def main():
     parser.add_argument("--hidden_dim", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=0.3)
     parser.add_argument("--limit_batches", type=int, default=None)
+    parser.add_argument("--no_attention", action="store_true",
+                        help="Ablation: train without the attention mechanism.")
     args = parser.parse_args()
 
     set_seed()
@@ -136,8 +138,11 @@ def main():
         target_vocab_size=len(target_vocab),
         embedding_dim=args.embedding_dim,
         encoder_hidden_dim=args.hidden_dim,
-        dropout=args.dropout
+        dropout=args.dropout,
+        use_attention=not args.no_attention
     ).to(device)
+
+    model_name = "best_lstm_noattn.pt" if args.no_attention else "best_lstm_attention.pt"
 
     param_count = count_parameters(model)
 
@@ -192,11 +197,12 @@ def main():
                 "embedding_dim": args.embedding_dim,
                 "hidden_dim": args.hidden_dim,
                 "dropout": args.dropout,
+                "use_attention": not args.no_attention,
                 "best_val_loss": best_val_loss,
                 "param_count": param_count
             }
 
-            torch.save(checkpoint, MODEL_DIR / "best_lstm_attention.pt")
+            torch.save(checkpoint, MODEL_DIR / model_name)
             print("Saved new best model.")
 
         preview_generation(model, val_loader, target_vocab, device)
@@ -225,7 +231,7 @@ def main():
     print("\nTraining complete.")
     print(f"Best validation loss: {best_val_loss:.4f}")
     print(f"Training time: {training_time_seconds / 60:.2f} minutes")
-    print(f"Saved model to: {MODEL_DIR / 'best_lstm_attention.pt'}")
+    print(f"Saved model to: {MODEL_DIR / model_name}")
     print(f"Saved metrics to: {METRICS_DIR / 'training_summary.json'}")
 
 
