@@ -43,5 +43,6 @@ outputs/metrics/*
 # Keep final results in the repo
 !outputs/metrics/*.json
 !outputs/metrics/*.csv
-!outputs/predictions/lstm_predictions_test.csv
+!outputs/predictions/lstm_attention_predictions_test.csv
+!outputs/predictions/lstm_noattn_predictions_test.csv
 !outputs/predictions/llm_predictions_test.csv
