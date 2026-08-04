@@ -1,0 +1,18 @@
+{
+  "model": "gpt-4.1-nano",
+  "num_examples": 1000,
+  "few_shot_k": 3,
+  "prompt_settings": [
+    "zero_shot_v1",
+    "zero_shot_v2",
+    "few_shot_v1",
+    "few_shot_v2"
+  ],
+  "total_requests": 4000,
+  "total_input_tokens": 3265336,
+  "total_output_tokens": 65978,
+  "runtime_seconds": 5919.295148134232,
+  "runtime_minutes": 98.65491913557052,
+  "estimated_cost_usd": 0.35292480000000004,
+  "note": "Cost uses gpt-4.1-nano list pricing $0.10/$0.40 per 1M input/output tokens."
+}
