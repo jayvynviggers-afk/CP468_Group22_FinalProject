@@ -168,8 +168,9 @@ def main():
         "lstm_output": predictions
     })
 
-    pred_path = PREDICTIONS_DIR / f"lstm_predictions_{args.split}.csv"
-    metrics_path = METRICS_DIR / f"lstm_metrics_{args.split}.json"
+    tag = "noattn" if not checkpoint.get("use_attention", True) else "attention"
+    pred_path = PREDICTIONS_DIR / f"lstm_{tag}_predictions_{args.split}.csv"
+    metrics_path = METRICS_DIR / f"lstm_{tag}_metrics_{args.split}.json"
 
     predictions_df.to_csv(pred_path, index=False)
 
